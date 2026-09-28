@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PR + QT → Lark</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+  <script src="config.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-inner">
+      <div>
+        <h1>PR + QT → Lark</h1>
+        <p class="sub">อัปโหลดใบขอซื้อ (PR) และใบเสนอราคา (QT) แล้วบันทึกลง Table <b>PR</b> ใน Lark Base</p>
+      </div>
+      <button class="ghost" id="settingsBtn" type="button">ตั้งค่า</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="demoBanner" class="banner" hidden>โหมดตัวอย่าง: ใช้ข้อมูลจำลอง ไม่ได้เชื่อมต่อ Lark จริง</div>
+
+    <!-- Settings -->
+    <section class="card" id="settings" hidden>
+      <h2>ตั้งค่าการเชื่อมต่อ</h2>
+      <label class="field">
+        <span>Worker URL</span>
+        <input id="workerUrl" type="url" placeholder="https://pr-qt-lark.<account>.workers.dev">
+      </label>
+      <label class="field">
+        <span>รหัสเข้าใช้งาน</span>
+        <input id="accessCode" type="password" autocomplete="current-password">
+      </label>
+      <div class="row">
+        <button id="saveSettings" type="button">บันทึกและทดสอบ</button>
+        <span id="settingsStatus" class="muted"></span>
+      </div>
+    </section>
+
+    <!-- Step 1 -->
+    <section class="card">
+      <h2><span class="step">1</span> แนบไฟล์</h2>
+      <div class="drops">
+        <label class="drop" id="prDrop">
+          <input type="file" id="prFile" accept=".pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls,.csv">
+          <strong>ไฟล์ PR</strong>
+          <span class="muted">PDF · Excel · รูปภาพ (1 ไฟล์)</span>
+          <ul class="files" id="prList"></ul>
+        </label>
+        <label class="drop" id="qtDrop">
+          <input type="file" id="qtFile" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls,.csv">
+          <strong>ไฟล์ QT</strong>
+          <span class="muted">PDF · Excel · รูปภาพ (หลายไฟล์ได้)</span>
+          <ul class="files" id="qtList"></ul>
+        </label>
+      </div>
+      <div class="row">
+        <button id="extractBtn" type="button" disabled>อ่านข้อมูล</button>
+        <span id="extractStatus" class="muted"></span>
+      </div>
+    </section>
+
+    <!-- Step 2 -->
+    <section class="card" id="review" hidden>
+      <h2><span class="step">2</span> ตรวจสอบข้อมูล</h2>
+      <ul id="warnings" class="warnings"></ul>
+
+      <div class="grid">
+        <label class="field">
+          <span>PR Number <em id="prState" class="pill"></em></span>
+          <input id="fPr" required>
+        </label>
+        <label class="field">
+          <span>Date</span>
+          <input id="fDate" type="date">
+        </label>
+        <label class="field span2">
+          <span>List</span>
+          <input id="fList">
+        </label>
+        <label class="field">
+          <span>รหัสค่าใช้จ่าย</span>
+          <select id="fExpense"><option value="">— ไม่ระบุ —</option></select>
+        </label>
+        <label class="field">
+          <span>Price</span>
+          <input id="fPrice" inputmode="decimal">
+        </label>
+        <div class="field">
+          <span>ราคาที่ใส่ใน Price</span>
+          <div class="seg" role="radiogroup">
+            <label><input type="radio" name="priceMode" value="grand" checked> รวม VAT</label>
+            <label><input type="radio" name="priceMode" value="sub"> ก่อน VAT</label>
+          </div>
+        </div>
+        <div class="field">
+          <span>สถานะ</span>
+          <div class="checks">
+            <label><input type="checkbox" id="fPrCheck" checked> PR</label>
+            <label><input type="checkbox" id="fInvCheck"> INV</label>
+          </div>
+        </div>
+      </div>
+
+      <p class="meta" id="qtMeta"></p>
+
+      <div class="table-wrap">
+        <table id="items">
+          <thead>
+            <tr><th>รายการ (ตาม PR)</th><th class="num">จำนวน</th><th>หน่วย</th><th class="num">ราคา/หน่วย (QT)</th><th class="num">จำนวนเงิน</th><th></th></tr>
+          </thead>
+          <tbody></tbody>
+          <tfoot>
+            <tr><td colspan="4" class="num">รวม</td><td class="num"><input id="tSub" inputmode="decimal"></td><td></td></tr>
+            <tr><td colspan="4" class="num">ส่วนลด</td><td class="num"><input id="tDisc" inputmode="decimal"></td><td></td></tr>
+            <tr><td colspan="4" class="num">VAT</td><td class="num"><input id="tVat" inputmode="decimal"></td><td></td></tr>
+            <tr class="grand"><td colspan="4" class="num">รวมทั้งสิ้น</td><td class="num"><input id="tGrand" inputmode="decimal"></td><td></td></tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="row end">
+        <label class="inline"><input type="checkbox" id="attachQt" checked> แนบไฟล์ QT ในคอลัมน์ QT</label>
+        <button id="saveBtn" type="button">บันทึกลง Lark</button>
+      </div>
+      <p id="saveStatus" class="muted"></p>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>
